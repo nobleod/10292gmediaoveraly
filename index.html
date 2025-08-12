@@ -1,1 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Overlay Pro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .custom-file-button input[type="file"] {
+            display: none;
+        }
+        .loader {
+            border-top-color: #3498db;
+            -webkit-animation: spin 1s linear infinite;
+            animation: spin 1s linear infinite;
+        }
+        @-webkit-keyframes spin {
+            0% { -webkit-transform: rotate(0deg); }
+            100% { -webkit-transform: rotate(360deg); }
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-200 flex items-center justify-center min-h-screen p-4">
 
+    <div class="w-full max-w-4xl mx-auto bg-gray-800 rounded-2xl shadow-2xl p-6 md:p-10 space-y-8">
+        
+        <!-- Header -->
+        <div class="text-center">
+            <h1 class="text-3xl md:text-4xl font-bold text-white">Video Overlay Pro</h1>
+            <p class="text-gray-400 mt-2">Apply a custom overlay to your video, right in your browser.</p>
+        </div>
+
+        <!-- Main Application -->
+        <div id="app-container" class="space-y-6">
+
+            <!-- Step 1: Upload -->
+            <div id="upload-section" class="bg-gray-900/50 p-6 rounded-xl border border-dashed border-gray-600 text-center">
+                <div class="custom-file-button">
+                    <label for="video-upload" class="cursor-pointer bg-indigo-600 text-white font-semibold py-3 px-6 rounded-lg hover:bg-indigo-500 transition-all duration-300 shadow-lg">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 inline-block mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                        </svg>
+                        Choose a Video
+                    </label>
+                    <input id="video-upload" type="file" accept="video/*">
+                </div>
+                <p id="file-name" class="mt-4 text-gray-400 text-sm truncate"></p>
+            </div>
+
+            <!-- Previews -->
+            <div id="preview-section" class="hidden grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <h3 class="text-lg font-semibold text-white mb-2 text-center">Original</h3>
+                    <video id="input-video" class="w-full rounded-lg bg-black" controls></video>
+                </div>
+                <div>
+                    <h3 class="text-lg font-semibold text-white mb-2 text-center">Result</h3>
+                    <div id="output-placeholder" class="w-full aspect-video bg-black rounded-lg flex items-center justify-center">
+                         <div id="processing-indicator" class="text-center hidden">
+                            <div class="loader h-12 w-12 rounded-full border-4 border-gray-600 mx-auto"></div>
+                            <p id="status-message" class="mt-4 text-lg font-medium text-white">Initializing...</p>
+                            <div class="w-full bg-gray-700 rounded-full h-2.5 mt-4">
+                                <div id="progress-bar" class="bg-indigo-600 h-2.5 rounded-full" style="width: 0%"></div>
+                            </div>
+                         </div>
+                    </div>
+                    <video id="output-video" class="w-full rounded-lg bg-black hidden" controls></video>
+                </div>
+            </div>
+
+            <!-- Action Button -->
+            <div id="action-section" class="text-center hidden">
+                <button id="process-btn" class="bg-green-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-green-500 transition-all duration-300 shadow-lg text-lg disabled:bg-gray-500 disabled:cursor-not-allowed">
+                    Apply Overlay & Prepare Download
+                </button>
+                <a id="download-btn" href="#" download="output.mp4" class="hidden bg-blue-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-blue-500 transition-all duration-300 shadow-lg text-lg">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 inline-block mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4-4m0 0L8 8m4-4v12" />
+                    </svg>
+                    Download Video
+                </a>
+            </div>
+             <!-- Info Box -->
+            <div class="text-center text-sm text-gray-500 pt-4">
+                <p>⚠️ Processing happens in your browser. Larger videos will take more time and consume more memory. Please be patient.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- FFmpeg.wasm scripts -->
+    <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js"></script>
+    <script>
+        // --- CONFIGURATION ---
+        // IMPORTANT: Replace this with the URL to YOUR custom PNG overlay file.
+        const OVERLAY_IMAGE_URL = 'https://placehold.co/1920x1080/000000/FFFFFF?text=Your+Overlay.png&font=raleway';
+
+        // DOM Elements
+        const { createFFmpeg, fetchFile } = FFmpeg;
+        const videoUpload = document.getElementById('video-upload');
+        const fileNameDisplay = document.getElementById('file-name');
+        const inputVideo = document.getElementById('input-video');
+        const outputVideo = document.getElementById('output-video');
+        const processBtn = document.getElementById('process-btn');
+        const downloadBtn = document.getElementById('download-btn');
+        const previewSection = document.getElementById('preview-section');
+        const actionSection = document.getElementById('action-section');
+        const outputPlaceholder = document.getElementById('output-placeholder');
+        const processingIndicator = document.getElementById('processing-indicator');
+        const statusMessage = document.getElementById('status-message');
+        const progressBar = document.getElementById('progress-bar');
+        
+        let ffmpeg;
+        let videoFile = null;
+
+        // Initialize FFmpeg instance
+        const initializeFFmpeg = async () => {
+            // FIX: Use the single-threaded core (@ffmpeg/core-st) to avoid SharedArrayBuffer errors.
+            ffmpeg = createFFmpeg({ 
+                log: true,
+                corePath: 'https://unpkg.com/@ffmpeg/core-st@0.11.0/dist/ffmpeg-core.js',
+            });
+            ffmpeg.setLogger(({ type, message }) => {
+                console.log(`[${type}] ${message}`);
+            });
+            ffmpeg.setProgress(({ ratio }) => {
+                if (ratio >= 0 && ratio <= 1) {
+                    progressBar.style.width = `${ratio * 100}%`;
+                }
+            });
+            statusMessage.textContent = 'Loading FFmpeg Core...';
+            await ffmpeg.load();
+            statusMessage.textContent = 'FFmpeg Ready!';
+            processingIndicator.classList.add('hidden');
+        };
+        
+        // Handle video file selection
+        videoUpload.addEventListener('change', (event) => {
+            videoFile = event.target.files[0];
+            if (videoFile) {
+                fileNameDisplay.textContent = `Selected: ${videoFile.name}`;
+                const fileURL = URL.createObjectURL(videoFile);
+                inputVideo.src = fileURL;
+                
+                previewSection.classList.remove('hidden');
+                actionSection.classList.remove('hidden');
+                processBtn.classList.remove('hidden');
+                downloadBtn.classList.add('hidden');
+                outputVideo.classList.add('hidden');
+                outputPlaceholder.classList.remove('hidden');
+                processBtn.disabled = false;
+            }
+        });
+
+        // Handle the main processing logic
+        processBtn.addEventListener('click', async () => {
+            if (!videoFile) {
+                // Using a custom modal/alert would be better, but for simplicity:
+                console.warn('Please select a video file first.');
+                return;
+            }
+
+            processBtn.disabled = true;
+            processingIndicator.classList.remove('hidden');
+            outputPlaceholder.classList.remove('hidden');
+            outputVideo.classList.add('hidden');
+            downloadBtn.classList.add('hidden');
+            progressBar.style.width = '0%';
+            
+            try {
+                if (!ffmpeg || !ffmpeg.isLoaded()) {
+                    await initializeFFmpeg();
+                }
+
+                statusMessage.textContent = 'Preparing files...';
+                
+                // Write video and overlay to FFmpeg's virtual file system
+                ffmpeg.FS('writeFile', videoFile.name, await fetchFile(videoFile));
+                statusMessage.textContent = 'Fetching overlay...';
+                ffmpeg.FS('writeFile', 'overlay.png', await fetchFile(OVERLAY_IMAGE_URL));
+
+                statusMessage.textContent = 'Processing video... (this may take a while)';
+                
+                // FFmpeg command explained:
+                // -i ${videoFile.name}: Input video file.
+                // -i overlay.png: Input overlay image.
+                // -filter_complex "[0:v]...[bg];[bg][1:v]...[v]": A chain of filters.
+                //   - [0:v]scale=1920:1080:force_original_aspect_ratio=decrease: Scales the video to fit within 1920x1080.
+                //   - pad=1920:1080:(ow-iw)/2:(oh-ih)/2:color=black: Adds black bars to fill the 1920x1080 frame.
+                //   - [bg][1:v]overlay=0:0: The result of the padding is then overlaid with the PNG image.
+                // -map "[v]": Selects the video stream from the filter complex.
+                // -map 0:a?: Selects the audio stream from the original video, if it exists.
+                // -c:v libx264: Encodes the video to H.264, which is great for MP4.
+                // -preset ultrafast: Optimizes for speed over file size.
+                // -crf 23: A good balance of quality and file size.
+                // output.mp4: The name of the final file.
+                await ffmpeg.run(
+                    '-i', videoFile.name,
+                    '-i', 'overlay.png',
+                    '-filter_complex', '[0:v]scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2:color=black[bg];[bg][1:v]overlay=0:0[v]',
+                    '-map', '[v]',
+                    '-map', '0:a?',
+                    '-c:v', 'libx264',
+                    '-preset', 'ultrafast',
+                    '-crf', '23',
+                    'output.mp4'
+                );
+
+                statusMessage.textContent = 'Finalizing...';
+                const data = ffmpeg.FS('readFile', 'output.mp4');
+                const videoUrl = URL.createObjectURL(new Blob([data.buffer], { type: 'video/mp4' }));
+
+                outputVideo.src = videoUrl;
+                downloadBtn.href = videoUrl;
+
+                outputVideo.classList.remove('hidden');
+                downloadBtn.classList.remove('hidden');
+                processBtn.classList.add('hidden');
+                processingIndicator.classList.add('hidden');
+                outputPlaceholder.classList.add('hidden');
+
+            } catch (error) {
+                console.error(error);
+                statusMessage.textContent = 'An error occurred. Check console for details.';
+                processBtn.disabled = false;
+            }
+        });
+
+        // Pre-load ffmpeg on page load for a faster experience on first click
+        initializeFFmpeg().catch(console.error);
+    </script>
+</body>
+</html>
