@@ -80,10 +80,10 @@
 
             <!-- Action Button -->
             <div id="action-section" class="text-center hidden">
-                <button id="process-btn" class="bg-green-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-green-500 transition-all duration-300 shadow-lg text-lg disabled:bg-gray-500 disabled:cursor-not-allowed">
+                <button id="process-btn" class="bg-green-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-green-500 transition-all duration-300 shadow-lg text-lg disabled:bg-gray-500 disabled:cu[...]
                     Apply Overlay & Prepare Download
                 </button>
-                <a id="download-btn" href="#" download="output.mp4" class="hidden bg-blue-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-blue-500 transition-all duration-300 shadow-lg text-lg">
+                <a id="download-btn" href="#" download="output.mp4" class="hidden bg-blue-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-blue-500 transition-all duration-300 shadow-lg text-lg"[...]
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 inline-block mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                       <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4-4m0 0L8 8m4-4v12" />
                     </svg>
@@ -101,8 +101,8 @@
     <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js"></script>
     <script>
         // --- CONFIGURATION ---
-        // IMPORTANT: Replace this with the URL to YOUR custom PNG overlay file.
-        const OVERLAY_IMAGE_URL = 'https://placehold.co/1920x1080/000000/FFFFFF?text=Your+Overlay.png&font=raleway';
+        // Use local logo.png from the repository as overlay.
+        const OVERLAY_IMAGE_URL = 'logo.png';
 
         // DOM Elements
         const { createFFmpeg, fetchFile } = FFmpeg;
